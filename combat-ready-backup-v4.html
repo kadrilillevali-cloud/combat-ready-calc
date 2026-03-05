@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Combat Ready — Müügikalkulaator</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0c0f0e;--surface:#141918;--surface2:#1a2120;--border:#2a3635;--border-light:#354342;--text:#e8ede9;--text-dim:#8a9e96;--text-muted:#5a6e66;--accent:#5ec4ff;--accent-dim:#3a9ad9;--red:#ff4d4d;--orange:#ff9933;--green:#33cc66;--blue:#33aaff}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'IBM Plex Sans',sans-serif;min-height:100vh}
+  .top-bar{background:linear-gradient(135deg,var(--surface),var(--surface2));border-bottom:1px solid var(--border);padding:20px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;backdrop-filter:blur(20px)}
+  .logo{font-family:'Bebas Neue',sans-serif;font-size:28px;letter-spacing:4px;color:var(--accent);display:flex;align-items:center;gap:12px}
+  .logo::before{content:'⬡';font-size:20px;opacity:.7}
+  .logo-sub{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-muted);letter-spacing:2px;text-transform:uppercase}
+  .tabs{display:flex;gap:4px;background:var(--bg);padding:4px;border-radius:10px;border:1px solid var(--border);flex-wrap:wrap}
+  .tab{padding:10px 24px;border:none;background:transparent;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:500;letter-spacing:1px;text-transform:uppercase;cursor:pointer;border-radius:7px;transition:all .25s;white-space:nowrap}
+  .tab:hover{color:var(--text);background:var(--surface)}
+  .tab.active{background:var(--accent);color:var(--bg);font-weight:600}
+  .main{max-width:1400px;margin:0 auto;padding:32px}
+  .calc-grid{display:grid;grid-template-columns:420px 1fr;gap:24px;align-items:start}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden}
+  .panel-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+  .panel-title{font-family:'Bebas Neue',sans-serif;font-size:18px;letter-spacing:2px}
+  .panel-badge{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:4px 10px;border-radius:20px;font-weight:600}
+  .panel-body{padding:24px}
+  .input-group{margin-bottom:18px}
+  .input-group:last-child{margin-bottom:0}
+  .input-label{display:block;font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+  .input-field{width:100%;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:500;transition:border-color .2s;outline:none}
+  .input-field:focus{border-color:var(--accent)}
+  .input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .input-hint{font-size:11px;color:var(--text-muted);margin-top:4px;font-style:italic}
+  select.input-field{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238a9e96' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;cursor:pointer}
+  .breakdown-table{width:100%;border-collapse:collapse}
+  .breakdown-table tr{border-bottom:1px solid var(--border)}
+  .breakdown-table tr:last-child{border-bottom:none}
+  .breakdown-table td{padding:10px 0;font-size:13px}
+  .breakdown-table td:first-child{color:var(--text-dim)}
+  .breakdown-table td:last-child{text-align:right;font-family:'IBM Plex Mono',monospace;font-weight:500;font-size:13px}
+  .breakdown-table tr.subtotal td{border-top:2px solid var(--border-light);padding-top:12px;font-weight:600}
+  .breakdown-table tr.negative td:last-child{color:var(--red)}
+  .breakdown-table tr.positive td:last-child{color:var(--green)}
+  .margin-bar-wrap{margin-top:16px}
+  .margin-bar-label{display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-bottom:6px;font-family:'IBM Plex Mono',monospace}
+  .margin-bar-bg{height:8px;background:var(--bg);border-radius:4px;overflow:hidden}
+  .margin-bar-fill{height:100%;border-radius:4px;transition:width .5s,background .3s}
+  .summary-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+  .summary-cell{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+  .summary-cell-label{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+  .summary-cell-value{font-family:'Bebas Neue',sans-serif;font-size:32px;letter-spacing:1px}
+  .warning-box{border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-top:16px;font-size:12px;line-height:1.5}
+  .warning-box.bad{background:rgba(255,77,77,.08);border:1px solid rgba(255,77,77,.2);color:var(--red)}
+  .warning-box.mid{background:rgba(255,153,51,.08);border:1px solid rgba(255,153,51,.2);color:var(--orange)}
+  .warning-box.good{background:rgba(51,204,102,.08);border:1px solid rgba(51,204,102,.2);color:var(--green)}
+  .toggle-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;padding:10px 14px;background:var(--bg);border-radius:8px;cursor:pointer;border:1px solid var(--border);transition:border-color .2s}
+  .toggle-row:hover{border-color:var(--border-light)}
+  .toggle-check{width:18px;height:18px;border:2px solid var(--border-light);border-radius:4px;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+  .toggle-check.on{background:var(--accent);border-color:var(--accent)}
+  .toggle-check.on::after{content:'✓';font-size:12px;color:var(--bg);font-weight:700}
+  .toggle-label{font-size:13px;color:var(--text-dim)}
+  .price-suggest{margin-top:20px;padding:16px;background:rgba(94,196,255,.04);border:1px solid rgba(94,196,255,.12);border-radius:10px}
+  .price-suggest-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent-dim);margin-bottom:12px}
+  .std-price-grid{display:grid;gap:8px}
+  .std-price-btn{padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;transition:all .2s;gap:12px}
+  .std-price-btn:hover{border-color:var(--accent);background:var(--surface2)}
+  .std-price-btn.active-price{border-color:var(--accent);background:rgba(94,196,255,.06)}
+  .std-price-left{display:flex;flex-direction:column;gap:2px}
+  .std-price-label{font-size:12px;color:var(--text-dim)}
+  .std-price-detail{font-size:10px;color:var(--text-muted)}
+  .std-price-value{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;color:var(--accent);white-space:nowrap}
+  .custom-divider{display:flex;align-items:center;gap:12px;margin:12px 0 4px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;font-family:'IBM Plex Mono',monospace}
+  .custom-divider::before,.custom-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+  .result-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:20px 24px}
+  .result-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+  .result-card-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--text-muted)}
+  .hidden{display:none}
+  .footer-note{text-align:center;padding:40px 32px;font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:1px}
+
+  .instr-ref{margin-top:20px;padding:16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px}
+  .instr-ref-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+  .instr-ref-row{display:flex;justify-content:space-between;align-items:flex-start;padding:7px 0;border-bottom:1px solid var(--border);font-size:12px}
+  .instr-ref-row:last-child{border-bottom:none}
+  .instr-ref-name{color:var(--text-dim);font-weight:500}
+  .instr-ref-rate{font-family:'IBM Plex Mono',monospace;color:var(--text);font-size:11px;text-align:right}
+
+  .instr-pay-card{margin-top:16px;padding:16px;border-radius:10px;border:1px solid var(--border)}
+  .instr-pay-card.ok{background:rgba(51,204,102,.05);border-color:rgba(51,204,102,.2)}
+  .instr-pay-card.low{background:rgba(255,77,77,.05);border-color:rgba(255,77,77,.2)}
+  .instr-pay-section-title{font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:12px}
+  .instr-pay-section-title:first-child{margin-top:0}
+  .instr-pay-section-title.ok{color:var(--green)}
+  .instr-pay-section-title.low{color:var(--red)}
+  .instr-pay-section-title.mixed{color:var(--orange)}
+  .ipr{display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:12px}
+  .ipr .nm{color:var(--text-dim)}
+  .ipr .vals{display:flex;align-items:center;gap:8px}
+  .ipr .pay{font-family:'IBM Plex Mono',monospace;font-weight:500}
+  .ipr .pay.ok{color:var(--green)}
+  .ipr .pay.low{color:var(--red)}
+  .ipr .diff{font-family:'IBM Plex Mono',monospace;font-size:10px}
+  .ipr .diff.ok{color:var(--green)}
+  .ipr .diff.low{color:var(--red)}
+  .ipr-divider{border-top:1px solid var(--border);margin:10px 0}
+
+  @media(max-width:900px){.calc-grid{grid-template-columns:1fr}.top-bar{flex-direction:column;gap:16px;align-items:flex-start}.summary-row{grid-template-columns:1fr}.main{padding:16px}}
+</style>
+</head>
+<body>
+<div class="top-bar">
+  <div><div class="logo">COMBAT READY</div><div class="logo-sub">Müügikalkulaator v4.0</div></div>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('jpl')">JPL</button>
+    <button class="tab" onclick="switchTab('ftx')">FTX</button>
+    <button class="tab" onclick="switchTab('matk')">Hike</button>
+  </div>
+</div>
+<div class="main">
+
+  <!-- ===== JPL / CLASSROOM ===== -->
+  <div id="tab-jpl" class="calc-grid">
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Sisendid</span><span class="panel-badge" style="background:var(--blue);color:#000">JPL</span></div>
+      <div class="panel-body">
+        <div class="input-group"><label class="input-label">Müügihind (€, ilma KM-ta)</label><input type="number" class="input-field" id="jpl-price" value="4000" min="0" step="50" oninput="calcJPL()"></div>
+        <div class="input-group"><label class="input-label">Osalejate arv</label><input type="number" class="input-field" id="jpl-participants" value="15" min="1" max="100" oninput="calcJPL()"></div>
+        <input type="hidden" id="jpl-duration" value="4">
+        <div class="input-group"><label class="input-label">Sõidukulu (€)</label><input type="number" class="input-field" id="jpl-transport" value="25" min="0" step="5" oninput="calcJPL()"></div>
+        <div style="margin-top:20px">
+          <div class="toggle-row" onclick="toggleCheck('jpl-fixed');calcJPL()"><div class="toggle-check" id="jpl-fixed-check"></div><span class="toggle-label">Lisa püsikulude allocatsioon</span></div>
+          <div id="jpl-fixed-fields" class="hidden"><div class="input-group"><label class="input-label">Püsikulude % müügihinnast</label><input type="number" class="input-field" id="jpl-fixed-pct" value="25" min="0" max="100" step="1" oninput="calcJPL()"><div class="input-hint">Nt kontor, töövahendid, turundus, palgad</div></div></div>
+        </div>
+        <div class="price-suggest">
+          <div class="price-suggest-title">Standardvalikud</div>
+          <div class="std-price-grid">
+            <div class="std-price-btn active-price" onclick="setStd(this,'jpl-price',4000);document.getElementById('jpl-duration').value='4';calcJPL()"><div class="std-price-left"><span class="std-price-label">JPL · 4 tundi</span></div><span class="std-price-value">4 000 €</span></div>
+            <div class="std-price-btn" onclick="setStd(this,'jpl-price',6000);document.getElementById('jpl-duration').value='7';calcJPL()"><div class="std-price-left"><span class="std-price-label">JPL · 7 tundi</span></div><span class="std-price-value">6 000 €</span></div>
+          </div>
+          <div class="custom-divider">või sisesta oma hind ülal</div>
+        </div>
+        <div class="instr-ref" id="jpl-instr-ref"></div>
+      </div>
+    </div></div>
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Kulude jaotus & marginaal</span></div>
+      <div class="panel-body">
+        <div class="summary-row" id="jpl-summary"></div>
+        <div id="jpl-instr-pay"></div>
+        <div class="result-card" style="margin-top:20px"><div class="result-card-header"><span class="result-card-title">Kulude ülevaade</span></div><table class="breakdown-table" id="jpl-breakdown"></table></div>
+        <div id="jpl-margin-section"></div><div id="jpl-warning"></div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ===== FTX ===== -->
+  <div id="tab-ftx" class="calc-grid hidden">
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Sisendid</span><span class="panel-badge" style="background:var(--orange);color:#000">FTX</span></div>
+      <div class="panel-body">
+        <div class="input-group"><label class="input-label">Müügihind (€, ilma KM-ta)</label><input type="number" class="input-field" id="ftx-price" value="10195" min="0" step="50" oninput="calcFTX()"></div>
+        <div class="input-group"><label class="input-label">Osalejate arv</label><input type="number" class="input-field" id="ftx-participants" value="15" min="1" max="100" oninput="calcFTX()"></div>
+        <div class="input-group"><label class="input-label">Rollimängijate arv</label><input type="number" class="input-field" id="ftx-actors" value="4" min="0" max="20" oninput="calcFTX()"></div>
+        <div class="input-group"><label class="input-label">Rollimängija tasu (€/tk)</label><input type="number" class="input-field" id="ftx-actor-fee" value="280" min="0" step="10" oninput="calcFTX()"></div>
+        <div class="input-row">
+          <div class="input-group"><label class="input-label">Koolitusmaterjalid (€/osaleja)</label><input type="number" class="input-field" id="ftx-materials" value="65" min="0" step="5" oninput="calcFTX()"></div>
+          <div class="input-group"><label class="input-label">Ruumi rent (€)</label><input type="number" class="input-field" id="ftx-room" value="600" min="0" step="50" oninput="calcFTX()"></div>
+        </div>
+        <div class="input-group"><label class="input-label">Sõidukulu (€)</label><input type="number" class="input-field" id="ftx-transport" value="170" min="0" step="10" oninput="calcFTX()"></div>
+        <div style="margin-top:20px">
+          <div class="toggle-row" onclick="toggleCheck('ftx-fixed');calcFTX()"><div class="toggle-check" id="ftx-fixed-check"></div><span class="toggle-label">Lisa püsikulude allocatsioon</span></div>
+          <div id="ftx-fixed-fields" class="hidden"><div class="input-group"><label class="input-label">Püsikulude % müügihinnast</label><input type="number" class="input-field" id="ftx-fixed-pct" value="25" min="0" max="100" step="1" oninput="calcFTX()"></div></div>
+        </div>
+        <div class="price-suggest">
+          <div class="price-suggest-title">Standardvalikud</div>
+          <div class="std-price-grid">
+            <div class="std-price-btn active-price" onclick="setStd(this,'ftx-price',10195);document.getElementById('ftx-participants').value=15;calcFTX()"><div class="std-price-left"><span class="std-price-label">FTX · 15 osalejat</span></div><span class="std-price-value">10 195 €</span></div>
+            <div class="std-price-btn" onclick="setStd(this,'ftx-price',13593);document.getElementById('ftx-participants').value=20;calcFTX()"><div class="std-price-left"><span class="std-price-label">FTX · 20 osalejat</span></div><span class="std-price-value">13 593 €</span></div>
+          </div>
+          <div class="custom-divider">või sisesta oma hind ülal</div>
+        </div>
+        <div class="instr-ref" id="ftx-instr-ref"></div>
+      </div>
+    </div></div>
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Kulude jaotus & marginaal</span></div>
+      <div class="panel-body">
+        <div class="summary-row" id="ftx-summary"></div>
+        <div id="ftx-instr-pay"></div>
+        <div class="result-card" style="margin-top:20px"><div class="result-card-header"><span class="result-card-title">Kulude ülevaade</span></div><table class="breakdown-table" id="ftx-breakdown"></table></div>
+        <div id="ftx-margin-section"></div><div id="ftx-warning"></div>
+      </div>
+    </div></div>
+  </div>
+
+  <!-- ===== LAHINGMATK ===== -->
+  <div id="tab-matk" class="calc-grid hidden">
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Sisendid</span><span class="panel-badge" style="background:var(--green);color:#000">Hike</span></div>
+      <div class="panel-body">
+        <div class="input-group"><label class="input-label">Müügihind (€, ilma KM-ta)</label><input type="number" class="input-field" id="matk-price" value="5500" min="0" step="50" oninput="calcMatk()"></div>
+        <div class="input-group"><label class="input-label">Osalejate arv</label><input type="number" class="input-field" id="matk-participants" value="10" min="1" max="100" oninput="calcMatk()"></div>
+        <input type="hidden" id="matk-duration" value="4">
+        <div class="input-group"><label class="input-label">Koolitusmaterjalid (€/osaleja)</label><input type="number" class="input-field" id="matk-materials" value="2" min="0" step="0.5" oninput="calcMatk()"></div>
+        <div class="input-group"><label class="input-label">Sõidukulu (€)</label><input type="number" class="input-field" id="matk-transport" value="65" min="0" step="5" oninput="calcMatk()"></div>
+        <div style="margin-top:20px">
+          <div class="toggle-row" onclick="toggleCheck('matk-fixed');calcMatk()"><div class="toggle-check" id="matk-fixed-check"></div><span class="toggle-label">Lisa püsikulude allocatsioon</span></div>
+          <div id="matk-fixed-fields" class="hidden"><div class="input-group"><label class="input-label">Püsikulude % müügihinnast</label><input type="number" class="input-field" id="matk-fixed-pct" value="25" min="0" max="100" step="1" oninput="calcMatk()"></div></div>
+        </div>
+        <div class="price-suggest">
+          <div class="price-suggest-title">Standardvalikud</div>
+          <div class="std-price-grid">
+            <div class="std-price-btn active-price" onclick="setStd(this,'matk-price',5500);document.getElementById('matk-duration').value='4';calcMatk()"><div class="std-price-left"><span class="std-price-label">Hike · 4 tundi</span></div><span class="std-price-value">5 500 €</span></div>
+            <div class="std-price-btn" onclick="setStd(this,'matk-price',8000);document.getElementById('matk-duration').value='8';calcMatk()"><div class="std-price-left"><span class="std-price-label">Hike · 8 tundi</span></div><span class="std-price-value">8 000 €</span></div>
+          </div>
+          <div class="custom-divider">või sisesta oma hind ülal</div>
+        </div>
+        <div class="instr-ref" id="matk-instr-ref"></div>
+      </div>
+    </div></div>
+    <div><div class="panel">
+      <div class="panel-header"><span class="panel-title">Kulude jaotus & marginaal</span></div>
+      <div class="panel-body">
+        <div class="summary-row" id="matk-summary"></div>
+        <div id="matk-instr-pay"></div>
+        <div class="result-card" style="margin-top:20px"><div class="result-card-header"><span class="result-card-title">Kulude ülevaade</span></div><table class="breakdown-table" id="matk-breakdown"></table></div>
+        <div id="matk-margin-section"></div><div id="matk-warning"></div>
+      </div>
+    </div></div>
+  </div>
+
+</div>
+<div class="footer-note">Combat Ready OÜ — Müügikalkulaator v4.0 — Kõik hinnad ilma KM-ta</div>
+
+<script>
+const fmt=n=>n.toLocaleString('et-EE',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtD=n=>n.toLocaleString('et-EE',{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct=n=>(n*100).toFixed(1)+'%';
+const toggleStates={};
+
+const INSTR=[
+  {name:'Aaro',minDay:200,note:'200 €/päev'},
+  {name:'Priit',minDay:500,note:'500 €/päev'},
+  {name:'Jaak',minDay:400,note:'400 € (JPL), 1×/kuu tasuta',jplRate:400},
+  {name:'Roland',minDay:240,note:'240 €/päev'}
+];
+
+function toggleCheck(id){toggleStates[id]=!toggleStates[id];document.getElementById(id+'-check').classList.toggle('on',toggleStates[id]);document.getElementById(id+'-fields').classList.toggle('hidden',!toggleStates[id])}
+function setStd(btn,inputId,val){document.getElementById(inputId).value=val;btn.closest('.std-price-grid').querySelectorAll('.std-price-btn').forEach(b=>b.classList.remove('active-price'));btn.classList.add('active-price')}
+function switchTab(tab){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('[id^="tab-"]').forEach(t=>t.classList.add('hidden'));document.getElementById('tab-'+tab).classList.remove('hidden');event.target.classList.add('active');({jpl:calcJPL,ftx:calcFTX,matk:calcMatk})[tab]()}
+function renderSummary(id,price,cost,profit){const m=price>0?profit/price:0;const mc=m>=.2?'var(--green)':m>=.05?'var(--orange)':'var(--red)';document.getElementById(id).innerHTML=`<div class="summary-cell"><div class="summary-cell-label">Müügihind</div><div class="summary-cell-value" style="color:var(--accent)">${fmt(price)} €</div></div><div class="summary-cell"><div class="summary-cell-label">Kogukulud</div><div class="summary-cell-value" style="color:var(--red)">${fmt(cost)} €</div></div><div class="summary-cell"><div class="summary-cell-label">Brutokasum</div><div class="summary-cell-value" style="color:${mc}">${fmt(profit)} €</div></div>`}
+function renderMarginBar(id,price,profit){const m=price>0?profit/price:0;const c=m>=.2?'var(--green)':m>=.05?'var(--orange)':'var(--red)';document.getElementById(id).innerHTML=`<div class="margin-bar-wrap"><div class="margin-bar-label"><span>Marginaal</span><span>${pct(m)}</span></div><div class="margin-bar-bg"><div class="margin-bar-fill" style="width:${Math.max(0,Math.min(100,m*100))}%;background:${c}"></div></div></div>`}
+function renderWarning(id,profit,price){const m=price>0?profit/price:0;if(price===0)document.getElementById(id).innerHTML=`<div class="warning-box mid">⚠ Sisesta müügihind</div>`;else if(profit<0)document.getElementById(id).innerHTML=`<div class="warning-box bad">⛔ Kahjumlik! Kulud ületavad hinda ${fmt(Math.abs(profit))} € võrra.</div>`;else if(m<.1)document.getElementById(id).innerHTML=`<div class="warning-box mid">⚠ Marginaal väga madal. Soovitav min 10–15%.</div>`;else document.getElementById(id).innerHTML=`<div class="warning-box good">✓ Marginaal tervislik — ${pct(m)}</div>`}
+function buildRows(items){return items.map(i=>`<tr class="${i.type||''}"><td>${i.label}</td><td>${i.value}</td></tr>`).join('')}
+
+function getMinPay(ins, hours, type) {
+  if (ins.name === 'Jaak' && type === 'jpl') return ins.jplRate;
+  return ins.minDay;
+}
+
+function renderInstrRef(cid, type, hours) {
+  let h=`<div class="instr-ref-title">Instruktorite miinimumtasud (referents)</div>`;
+  INSTR.forEach(ins=>{
+    let rate='';
+    if(ins.name==='Jaak') rate=type==='jpl'?'400 € (JPL) · 1×/kuu tasuta':`${ins.minDay} €/päev · 1×/kuu tasuta`;
+    else rate=`${ins.minDay} €/päev`;
+    h+=`<div class="instr-ref-row"><span class="instr-ref-name">${ins.name}</span><span class="instr-ref-rate">${rate}</span></div>`;
+  });
+  document.getElementById(cid).innerHTML=h;
+}
+
+function renderInstrPaySingle(cid, pay, type, hours, label) {
+  let anyLow=false;
+  const rows=INSTR.map(ins=>{
+    const min=getMinPay(ins,hours,type);
+    const low=pay<min; if(low)anyLow=true;
+    const d=pay-min;
+    return `<div class="ipr"><span class="nm">${ins.name} (min ${fmt(min)} €)</span><span class="vals"><span class="pay ${low?'low':'ok'}">${fmt(pay)} €</span><span class="diff ${low?'low':'ok'}">${d>=0?'+':''}${fmt(d)} €</span></span></div>`;
+  }).join('');
+  const cls=anyLow?'low':'ok';
+  document.getElementById(cid).innerHTML=`<div class="instr-pay-card ${cls}"><div class="instr-pay-section-title ${anyLow?'mixed':'ok'}">${anyLow?'⚠':'✓'} ${label} = ${fmt(pay)} € vs miinimumid</div>${rows}</div>`;
+}
+
+function renderInstrPayFTX(cid, payMain, payAbi, hours) {
+  let anyLow=false;
+  function makeRows(pay) {
+    return INSTR.map(ins=>{
+      const min=getMinPay(ins,hours,'ftx');
+      const low=pay<min; if(low)anyLow=true;
+      const d=pay-min;
+      return `<div class="ipr"><span class="nm">${ins.name} (min ${fmt(min)} €)</span><span class="vals"><span class="pay ${low?'low':'ok'}">${fmt(pay)} €</span><span class="diff ${low?'low':'ok'}">${d>=0?'+':''}${fmt(d)} €</span></span></div>`;
+    }).join('');
+  }
+  const mainRows=makeRows(payMain);
+  const al1=anyLow; anyLow=false;
+  const abiRows=makeRows(payAbi);
+  const al2=anyLow;
+  const cls=(al1||al2)?'low':'ok';
+  document.getElementById(cid).innerHTML=`<div class="instr-pay-card ${cls}">
+    <div class="instr-pay-section-title ${al1?'mixed':'ok'}">${al1?'⚠':'✓'} Põhiinstruktor (6%) = ${fmt(payMain)} € vs miinimumid</div>${mainRows}
+    <div class="ipr-divider"></div>
+    <div class="instr-pay-section-title ${al2?'mixed':'ok'}">${al2?'⚠':'✓'} Abiinstruktor (4%) = ${fmt(payAbi)} € vs miinimumid</div>${abiRows}
+  </div>`;
+}
+
+// ===== JPL / CLASSROOM — instruktor 20% =====
+function calcJPL(){
+  const p=+document.getElementById('jpl-price').value||0;
+  const n=+document.getElementById('jpl-participants').value||1;
+  const dur=+document.getElementById('jpl-duration').value;
+  const transp=+document.getElementById('jpl-transport').value||0;
+  const incF=toggleStates['jpl-fixed']||false;
+  const fPct=(+document.getElementById('jpl-fixed-pct').value||0)/100;
+
+  const lead=p*.05,salesCost=p*.20,salesMgmt=p*.05,instr=p*.20;
+  const ef=p*.05,ceo=p*.05,crf=p*.01;
+  const variable=lead+salesCost+salesMgmt+instr+ef+ceo+crf+transp;
+  const fixA=incF?p*fPct:0;
+  const total=variable+fixA;
+  const profit=p-total;
+
+  const rows=[
+    {label:'Lead (5%)',value:fmt(lead)+' €'},
+    {label:'Müügikulu (20%)',value:fmt(salesCost)+' €'},
+    {label:'Müügijuhtimine (5%)',value:fmt(salesMgmt)+' €'},
+    {label:'Instruktori tasu (20%)',value:fmt(instr)+' €'},
+    {label:'Sõidukulu',value:fmt(transp)+' €'},
+    {label:'EF litsentsitasu (5%)',value:fmt(ef)+' €'},
+    {label:'CEO tasu (5%)',value:fmt(ceo)+' €'},
+    {label:'CR Foundation (1%)',value:fmt(crf)+' €'},
+  ];
+  if(incF) rows.push({label:`Püsikulud (${(fPct*100).toFixed(0)}%)`,value:fmt(fixA)+' €'});
+  rows.push({label:'KOGUKULUD',value:fmt(total)+' €',type:'subtotal'});
+  rows.push({label:'BRUTOKASUM',value:fmt(profit)+' €',type:profit>=0?'positive':'negative'});
+  if(p>0) rows.push({label:'Hind osaleja kohta',value:fmt(p/n)+' €'});
+
+  document.getElementById('jpl-breakdown').innerHTML=buildRows(rows);
+  renderSummary('jpl-summary',p,total,profit);
+  renderMarginBar('jpl-margin-section',p,profit);
+  renderWarning('jpl-warning',profit,p);
+  renderInstrRef('jpl-instr-ref','jpl',dur);
+  renderInstrPaySingle('jpl-instr-pay',instr,'jpl',dur,'Instruktori tasu (20%)');
+}
+
+// ===== FTX — põhi 6%+6%, abi 4%+4% =====
+function calcFTX(){
+  const p=+document.getElementById('ftx-price').value||0;
+  const n=+document.getElementById('ftx-participants').value||1;
+  const nAct=+document.getElementById('ftx-actors').value||0;
+  const fAct=+document.getElementById('ftx-actor-fee').value||0;
+  const matPP=+document.getElementById('ftx-materials').value||0;
+  const room=+document.getElementById('ftx-room').value||0;
+  const transp=+document.getElementById('ftx-transport').value||0;
+  const incF=toggleStates['ftx-fixed']||false;
+  const fPct=(+document.getElementById('ftx-fixed-pct').value||0)/100;
+
+  const lead=p*.05,salesCost=p*.20,salesMgmt=p*.05;
+  const instrMain=p*.12; // 2×6%
+  const instrAbi=p*.08;  // 2×4%
+  const ef=p*.05,ceo=p*.05,crf=p*.01,po=p*.05;
+  const actT=nAct*fAct;
+  const matT=n*matPP;
+  const variable=lead+salesCost+salesMgmt+instrMain+instrAbi+ef+ceo+crf+po+actT+matT+room+transp;
+  const fixA=incF?p*fPct:0;
+  const total=variable+fixA;
+  const profit=p-total;
+
+  const payPerMain=p*.06;
+  const payPerAbi=p*.04;
+
+  const rows=[
+    {label:'Lead (5%)',value:fmt(lead)+' €'},
+    {label:'Müügikulu (20%)',value:fmt(salesCost)+' €'},
+    {label:'Müügijuhtimine (5%)',value:fmt(salesMgmt)+' €'},
+    {label:`Põhiinstruktorid 2× (6%+6%)`,value:fmt(instrMain)+' €'},
+    {label:`Abiinstruktorid 2× (4%+4%)`,value:fmt(instrAbi)+' €'},
+    {label:`Rollimängijad (${nAct} × ${fmt(fAct)}€)`,value:fmt(actT)+' €'},
+    {label:'Tooteomanik (5%)',value:fmt(po)+' €'},
+    {label:`Koolitusmaterjalid (${n} × ${fmt(matPP)}€)`,value:fmt(matT)+' €'},
+    {label:'Ruumi rent',value:fmt(room)+' €'},
+    {label:'Sõidukulu',value:fmt(transp)+' €'},
+    {label:'EF litsentsitasu (5%)',value:fmt(ef)+' €'},
+    {label:'CEO tasu (5%)',value:fmt(ceo)+' €'},
+    {label:'CR Foundation (1%)',value:fmt(crf)+' €'},
+  ];
+  if(incF) rows.push({label:`Püsikulud (${(fPct*100).toFixed(0)}%)`,value:fmt(fixA)+' €'});
+  rows.push({label:'KOGUKULUD',value:fmt(total)+' €',type:'subtotal'});
+  rows.push({label:'BRUTOKASUM',value:fmt(profit)+' €',type:profit>=0?'positive':'negative'});
+  if(p>0) rows.push({label:'Hind osaleja kohta',value:fmt(p/n)+' €'});
+
+  document.getElementById('ftx-breakdown').innerHTML=buildRows(rows);
+  renderSummary('ftx-summary',p,total,profit);
+  renderMarginBar('ftx-margin-section',p,profit);
+  renderWarning('ftx-warning',profit,p);
+  renderInstrRef('ftx-instr-ref','ftx',8);
+  renderInstrPayFTX('ftx-instr-pay',payPerMain,payPerAbi,8);
+}
+
+// ===== LAHINGMATK — instruktor 20% =====
+function calcMatk(){
+  const p=+document.getElementById('matk-price').value||0;
+  const n=+document.getElementById('matk-participants').value||1;
+  const dur=+document.getElementById('matk-duration').value;
+  const matPP=+document.getElementById('matk-materials').value||0;
+  const transp=+document.getElementById('matk-transport').value||0;
+  const incF=toggleStates['matk-fixed']||false;
+  const fPct=(+document.getElementById('matk-fixed-pct').value||0)/100;
+
+  const lead=p*.05,salesCost=p*.20,salesMgmt=p*.05,instr=p*.20;
+  const ef=p*.05,ceo=p*.05,crf=p*.01,po=p*.05;
+  const matT=n*matPP;
+  const variable=lead+salesCost+salesMgmt+instr+ef+ceo+crf+po+matT+transp;
+  const fixA=incF?p*fPct:0;
+  const total=variable+fixA;
+  const profit=p-total;
+
+  const rows=[
+    {label:'Lead (5%)',value:fmt(lead)+' €'},
+    {label:'Müügikulu (20%)',value:fmt(salesCost)+' €'},
+    {label:'Müügijuhtimine (5%)',value:fmt(salesMgmt)+' €'},
+    {label:'Instruktori tasu (20%)',value:fmt(instr)+' €'},
+    {label:'Tooteomanik (5%)',value:fmt(po)+' €'},
+    {label:`Koolitusmaterjalid (${n} × ${fmtD(matPP)}€)`,value:fmt(matT)+' €'},
+    {label:'Sõidukulu',value:fmt(transp)+' €'},
+    {label:'EF litsentsitasu (5%)',value:fmt(ef)+' €'},
+    {label:'CEO tasu (5%)',value:fmt(ceo)+' €'},
+    {label:'CR Foundation (1%)',value:fmt(crf)+' €'},
+  ];
+  if(incF) rows.push({label:`Püsikulud (${(fPct*100).toFixed(0)}%)`,value:fmt(fixA)+' €'});
+  rows.push({label:'KOGUKULUD',value:fmt(total)+' €',type:'subtotal'});
+  rows.push({label:'BRUTOKASUM',value:fmt(profit)+' €',type:profit>=0?'positive':'negative'});
+  if(p>0) rows.push({label:'Hind osaleja kohta',value:fmt(p/n)+' €'});
+
+  document.getElementById('matk-breakdown').innerHTML=buildRows(rows);
+  renderSummary('matk-summary',p,total,profit);
+  renderMarginBar('matk-margin-section',p,profit);
+  renderWarning('matk-warning',profit,p);
+  renderInstrRef('matk-instr-ref','matk',dur);
+  renderInstrPaySingle('matk-instr-pay',instr,'matk',dur,'Instruktori tasu (20%)');
+}
+
+calcJPL();calcFTX();calcMatk();
+</script>
+</body>
+</html>
